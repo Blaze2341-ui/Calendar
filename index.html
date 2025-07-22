@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recovery Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-start p-4">
+  <div id="root" class="w-full max-w-4xl"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function TabSwitcher({ activeTab, setActiveTab }) {
+      return (
+        <div className="flex justify-center mb-4">
+          {['Recovery', 'Calendar'].map(tab => (
+            <button
+              key={tab}
+              className={`px-4 py-2 mx-1 rounded-t-lg font-medium ${
+                activeTab === tab ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function RecoveryCalendar() {
+      const [completedDates, setCompletedDates] = useState([]);
+
+      useEffect(() => {
+        const saved = JSON.parse(localStorage.getItem("recoveryDays") || "[]");
+        setCompletedDates(saved);
+      }, []);
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+
+      const startOfMonth = new Date(year, month, 1);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const startDay = startOfMonth.getDay();
+
+      const dates = Array.from({ length: startDay }, () => null).concat(
+        Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1))
+      );
+
+      const isCompleted = (date) =>
+        completedDates.includes(date.toISOString().split("T")[0]);
+
+      return (
+        <div className="bg-white shadow rounded p-6">
+          <h2 className="text-xl font-bold mb-4">
+            {today.toLocaleString("default", { month: "long" })} {year}
+          </h2>
+          <div className="grid grid-cols-7 text-center font-semibold text-gray-600 mb-2">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {dates.map((date, idx) =>
+              date ? (
+                <div
+                  key={idx}
+                  className={`p-2 rounded text-sm text-center ${
+                    isCompleted(date)
+                      ? "bg-green-500 text-white font-bold"
+                      : "bg-gray-100"
+                  }`}
+                >
+                  {date.getDate()}
+                </div>
+              ) : (
+                <div key={idx} />
+              )
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function RecoveryApp() {
+      const [activeTab, setActiveTab] = useState("Recovery");
+      const [stepsCompleted, setStepsCompleted] = useState([]);
+
+      const recoverySteps = [
+        "Hydrate",
+        "Stretch or Yoga",
+        "Use Sauna or Hot Tub",
+        "Cold Shower or Pool Dip",
+        "Massage or Foam Roll"
+      ];
+
+      const handleStepToggle = (step) => {
+        setStepsCompleted((prev) => {
+          const updated = prev.includes(step)
+            ? prev.filter((s) => s !== step)
+            : [...prev, step];
+
+          if (updated.length === recoverySteps.length) {
+            const today = new Date().toISOString().split("T")[0];
+            const saved = JSON.parse(localStorage.getItem("recoveryDays") || "[]");
+            if (!saved.includes(today)) {
+              saved.push(today);
+              localStorage.setItem("recoveryDays", JSON.stringify(saved));
+            }
+          }
+
+          return updated;
+        });
+      };
+
+      return (
+        <div>
+          <h1 className="text-3xl font-bold text-center mb-6">Recovery Tracker</h1>
+          <TabSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
+
+          {activeTab === "Recovery" ? (
+            <div className="bg-white shadow rounded p-6 mb-4">
+              <h2 className="text-xl font-bold mb-4">Recovery Steps</h2>
+              {recoverySteps.map((step, i) => (
+                <label key={i} className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    checked={stepsCompleted.includes(step)}
+                    onChange={() => handleStepToggle(step)}
+                    className="mr-2 w-5 h-5 text-blue-600"
+                  />
+                  <span className={stepsCompleted.includes(step) ? "line-through text-gray-500" : ""}>{step}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <RecoveryCalendar />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<RecoveryApp />);
+  </script>
+</body>
+</html>
